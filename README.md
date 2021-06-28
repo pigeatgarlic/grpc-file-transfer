@@ -10,6 +10,20 @@ You can build protocol buffer files using the command
 build\proto-gen.bat
 ```
 
+## Run
+
+### Server
+
+```shell
+go run .\cmd\server\main.go start -path="C:\Desktop"
+```
+
+### Client
+
+```shell
+go run .\cmd\client\main.go upload -path="C:\Desktop\file.txt"
+```
+
 ## Dependencies
 
 ### Protoc 
