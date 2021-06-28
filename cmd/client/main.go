@@ -8,7 +8,7 @@ import (
 	"github.com/urfave/cli/v2"
 	"google.golang.org/grpc"
 
-	"bitbucket.org/maxex/mls_poc/pkg/client"
+	"github.com/aleitner/grpc-file-server/pkg/client"
 )
 
 func main() {

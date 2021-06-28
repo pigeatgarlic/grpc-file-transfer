@@ -10,7 +10,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
-	mlspb "bitbucket.org/maxex/mls_poc/pkg/protobuf"
+	mlspb "github.com/aleitner/grpc-file-server/pkg/protobuf"
 )
 
 // MLSClient maintains info for talking to MLS service
