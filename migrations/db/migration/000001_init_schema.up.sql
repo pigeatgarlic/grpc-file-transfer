@@ -1,0 +1,4 @@
+CREATE TABLE demo (
+    id INTEGER PRIMARY KEY,
+    name VARCHAR(20)
+);

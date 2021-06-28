@@ -1,0 +1,23 @@
+syntax = "proto3";
+option go_package = "./;mlspb";
+
+package mlspb;
+
+service MLSService {
+  rpc Upload(stream Chunk) returns (UploadStatus) {}
+}
+
+message Chunk {
+  bytes content = 1;
+}
+
+message UploadStatus {
+  enum UploadStatusCode {
+    Unknown = 0;
+    Ok = 1;
+    Failed = 2;
+  }
+
+  string message = 1;
+  UploadStatusCode code = 2;
+}
