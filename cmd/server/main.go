@@ -18,7 +18,7 @@ func main() {
 	logger := logrus.New()
 	lis, err := net.Listen("tcp", ":8080")
 	if err != nil {
-		fmt.Println("failed")
+		fmt.Printf("failed %s\n",err.Error())
 		os.Exit(1)
 	}
 	defer lis.Close()
