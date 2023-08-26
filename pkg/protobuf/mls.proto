@@ -6,20 +6,15 @@ option go_package = "./;mlspb";
 
 
 service MLSService {
-  rpc Upload(stream Chunk) returns (UploadStatus);
+  rpc Upload(stream Chunk) returns (stream UploadStatus);
 }
 
 message Chunk {
-  bytes content = 1;
+  int64 id = 1;
+  bytes content = 2;
+  string sum256 = 3;
 }
 
 message UploadStatus {
-  enum UploadStatusCode {
-    Unknown = 0;
-    Ok = 1;
-    Failed = 2;
-  }
-
-  string message = 1;
-  UploadStatusCode code = 2;
+  repeated int64 success = 1;
 }

@@ -44,7 +44,7 @@ func (c *mLSServiceClient) Upload(ctx context.Context, opts ...grpc.CallOption) 
 
 type MLSService_UploadClient interface {
 	Send(*Chunk) error
-	CloseAndRecv() (*UploadStatus, error)
+	Recv() (*UploadStatus, error)
 	grpc.ClientStream
 }
 
@@ -56,10 +56,7 @@ func (x *mLSServiceUploadClient) Send(m *Chunk) error {
 	return x.ClientStream.SendMsg(m)
 }
 
-func (x *mLSServiceUploadClient) CloseAndRecv() (*UploadStatus, error) {
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
+func (x *mLSServiceUploadClient) Recv() (*UploadStatus, error) {
 	m := new(UploadStatus)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -100,7 +97,7 @@ func _MLSService_Upload_Handler(srv interface{}, stream grpc.ServerStream) error
 }
 
 type MLSService_UploadServer interface {
-	SendAndClose(*UploadStatus) error
+	Send(*UploadStatus) error
 	Recv() (*Chunk, error)
 	grpc.ServerStream
 }
@@ -109,7 +106,7 @@ type mLSServiceUploadServer struct {
 	grpc.ServerStream
 }
 
-func (x *mLSServiceUploadServer) SendAndClose(m *UploadStatus) error {
+func (x *mLSServiceUploadServer) Send(m *UploadStatus) error {
 	return x.ServerStream.SendMsg(m)
 }
 
@@ -132,6 +129,7 @@ var MLSService_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "Upload",
 			Handler:       _MLSService_Upload_Handler,
+			ServerStreams: true,
 			ClientStreams: true,
 		},
 	},
