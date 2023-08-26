@@ -10,7 +10,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
-	mlspb "github.com/aleitner/grpc-file-server/pkg/protobuf"
+	mlspb "github.com/pigeatgarlic/grpc-file-server/pkg/protobuf"
 )
 
 // MLSClient maintains info for talking to MLS service
@@ -44,7 +44,7 @@ func (mc *MLSClient) Upload(ctx context.Context, f *os.File) error {
 		return err
 	}
 
-	buf := make([]byte, 1024*16)
+	buf := make([]byte, 1024 * 256) // 16MB chunk
 	for {
 		n, err := f.Read(buf)
 		if err != nil {

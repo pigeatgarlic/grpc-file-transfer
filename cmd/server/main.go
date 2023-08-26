@@ -2,72 +2,37 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"os"
 
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
 	"google.golang.org/grpc"
 
-	"github.com/aleitner/grpc-file-server/pkg/server"
+	"github.com/pigeatgarlic/grpc-file-server/pkg/server"
+	mlspb "github.com/pigeatgarlic/grpc-file-server/pkg/protobuf"
 )
 
 func main() {
-	app := &cli.App{
-		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:  "address",
-				Value: ":8080",
-				Usage: "server address",
-			},
-		},
-		Commands: []*cli.Command{
-			{
-				Name:    "start",
-				Aliases: []string{"s"},
-				Usage:   "start server",
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:     "path",
-						Value:    "",
-						Usage:    "path for data to be stored",
-						Required: true,
-					},
-				},
-				Action: func(c *cli.Context) error {
-					// do a little server startin here
-					logger := logrus.New()
-					documentDir := c.String("path")
+	Dir := os.Args[1]
 
-					lis, err := net.Listen("tcp", ":8080")
-					if err != nil {
-						fmt.Println("failed")
-						os.Exit(1)
-					}
-					defer lis.Close()
-
-					logger.Infof("Now serving %s", lis.Addr().String())
-
-					grpcServer := grpc.NewServer()
-
-					s := server.NewMLSServer(logger, documentDir)
-					server.RegisterMLSServer(grpcServer, s)
-					defer grpcServer.GracefulStop()
-
-					if err = grpcServer.Serve(lis); err != nil {
-						fmt.Println(err)
-						os.Exit(1)
-					}
-
-					return nil
-				},
-			},
-		},
-	}
-
-	err := app.Run(os.Args)
+	logger := logrus.New()
+	lis, err := net.Listen("tcp", ":8080")
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("failed")
+		os.Exit(1)
+	}
+	defer lis.Close()
+
+	logger.Infof("Now serving %s", lis.Addr().String())
+
+	grpcServer := grpc.NewServer()
+
+	s := server.NewMLSServer(logger, Dir)
+	mlspb.RegisterMLSServiceServer(grpcServer, s)
+	defer grpcServer.GracefulStop()
+
+	if err = grpcServer.Serve(lis); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
 }

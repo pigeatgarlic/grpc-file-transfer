@@ -5,15 +5,17 @@ import (
 	"io"
 	"os"
 	"path"
+	"time"
 
-	mlspb "github.com/aleitner/grpc-file-server/pkg/protobuf"
+	mlspb "github.com/pigeatgarlic/grpc-file-server/pkg/protobuf"
+	"google.golang.org/grpc"
 
 	log "github.com/sirupsen/logrus"
-	"google.golang.org/grpc"
 )
 
 // MLSServer
 type MLSServer struct {
+	mlspb.UnimplementedMLSServiceServer
 	logger      *log.Logger
 	documentDir string
 }
@@ -49,8 +51,27 @@ func (ms *MLSServer) Upload(stream mlspb.MLSService_UploadServer) error {
 
 	totalBytesReceived := int64(0)
 
+	done := false
+	go func()  {
+		last := time.Now().UnixMilli()
+		for {
+			if done {
+				return
+			}
+
+			time.Sleep(1 * time.Second)
+			stat,err := f.Stat()
+			if err != nil {
+				return
+			}
+
+			total := ( time.Now().UnixMilli() - last ) / 1000
+			speed := stat.Size() / 1024 / 1024 / (total)
+			fmt.Printf("%dMB speed=%dMB/s\n",stat.Size() / 1024 / 1024,speed)
+		}
+	}()
+
 	for {
-		// Read Data
 		data, err := stream.Recv()
 		if err != nil {
 			if err == io.EOF {
@@ -76,6 +97,7 @@ func (ms *MLSServer) Upload(stream mlspb.MLSService_UploadServer) error {
 	}
 
 	ms.logger.Infof("Finished receiving file %s", md.fileName)
+	done = true
 
 	return nil
 }
