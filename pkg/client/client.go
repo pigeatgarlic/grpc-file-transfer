@@ -2,9 +2,12 @@ package client
 
 import (
 	"context"
+	"crypto/md5"
+	"fmt"
 	"io"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -35,40 +38,105 @@ func (mc *MLSClient) Upload(ctx context.Context, f *os.File) error {
 	if err != nil {
 		return err
 	}
-
-	md := metadata.Pairs("file_name", info.Name(), "file_size", strconv.FormatInt(info.Size(), 10))
-	ctx = metadata.NewOutgoingContext(ctx, md)
+	ctx = metadata.NewOutgoingContext(ctx,metadata.Pairs(
+		"file_name", info.Name(), 
+		"file_size", strconv.FormatInt(info.Size(), 10),
+	))
 
 	stream, err := mc.route.Upload(ctx)
 	if err != nil {
 		return err
 	}
 
-	buf := make([]byte, 1024 * 256) // 16MB chunk
+	done := false
+	sent,success := []int64{},[]int64{}
+	channel := make(chan []byte,1000)
+
+
+	go func() {
+		var count int64 = 1
+		for {
+			buf:=<-channel
+			if buf == nil {
+				return
+			}
+
+
+			sent = append(sent, count)
+			chunk := &mlspb.Chunk{
+				Id: count,
+				Content: buf,
+				Sum256: fmt.Sprintf("%x", md5.Sum(buf)),
+			}
+			if err := stream.Send(chunk); err != nil {
+				if err == io.EOF {
+					break
+				}
+
+				panic(err)
+			}
+
+			count++
+		}
+	}()
+
+	go func ()  {
+		for {
+			buf := make([]byte, 1024 * 512) // 16MB chunk
+			n,err := f.Read(buf)
+			if err != nil {
+				if err == io.EOF {
+					done = true
+					channel<-nil
+					break
+				}
+
+				panic(err)
+			}
+
+			channel <- buf[:n]
+		}
+	}()
+
+	go func ()  {
+		for {
+			status,err := stream.Recv()
+			if err != nil {
+				panic(err)
+			}
+
+			success = status.Success
+		}
+	}()
+
 	for {
-		n, err := f.Read(buf)
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-
-			return err
+		time.Sleep(100 * time.Millisecond)
+		if !done {
+			continue
 		}
 
-		if err := stream.Send(&mlspb.Chunk{Content: buf[:n]}); err != nil {
-			if err == io.EOF {
-				break
+
+		pass := true
+		for _, v := range sent {
+			included := false
+			for _,v2 := range success {
+				if v == v2 {
+					included = true
+				}
 			}
 
-			return err
+			if !included {
+				pass = false
+			}
 		}
-	}
 
-	if err := stream.CloseSend(); err != nil {
-		return err
+		if pass {
+			break
+		}
 	}
 
 	mc.logger.Infof("Finished sending file...")
+	mc.CloseConn()
 	return nil
 }
 
