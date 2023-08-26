@@ -1,10 +1,12 @@
 syntax = "proto3";
-option go_package = "./;mlspb";
 
 package mlspb;
 
+option go_package = "./;mlspb";
+
+
 service MLSService {
-  rpc Upload(stream Chunk) returns (UploadStatus) {}
+  rpc Upload(stream Chunk) returns (UploadStatus);
 }
 
 message Chunk {
