@@ -13,10 +13,11 @@ import (
 )
 
 func main() {
-	Dir := os.Args[1]
+	Dir  := os.Args[1]
+	Port := os.Args[2]
 
 	logger := logrus.New()
-	lis, err := net.Listen("tcp", ":8080")
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%s",Port))
 	if err != nil {
 		fmt.Printf("failed %s\n",err.Error())
 		os.Exit(1)
