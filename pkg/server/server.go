@@ -55,9 +55,20 @@ func (ms *MLSServer) Upload(stream mlspb.MLSService_UploadServer) error {
 	channel := make(chan *mlspb.Chunk, 1000)
 	defer func() {
 		done = true
+		for {
+			time.Sleep(10 * time.Millisecond)
+			stat,err := f.Stat()
+			if err != nil {
+				return
+			} else if stat.Size() == bytes_received {
+				break
+			}
+		}
+
+
 		f.Close()
 		if bytes_received < md.fileSize {
-			ms.logger.Errorf("Only received %d bytes out of the expect %d bytes for file %s", bytes_received, size, tempFile)
+			ms.logger.Errorf("Only received %dMB out of %dMB for file %s", bytes_received / 1024 / 1024, size / 1024 / 1024, tempFile)
 			os.Remove(tempFile)
 		} else {
 			ms.logger.Infof("Finished receiving file %s", destFile)
@@ -72,20 +83,14 @@ func (ms *MLSServer) Upload(stream mlspb.MLSService_UploadServer) error {
 		last := time.Now().UnixMilli()
 		for {
 			time.Sleep(1 * time.Second)
-			stat,err := f.Stat()
-			if err != nil {
-				return
-			}
-
-			bytes_received = stat.Size()
 			total := ( time.Now().UnixMilli() - last ) / 1000
-			speed := stat.Size() / 1024 / 1024 / (total)
-			ms.logger.Infof("%dMB speed=%dMB/s\n",stat.Size() / 1024 / 1024,speed)
+			speed := bytes_received / 1024 / 1024 / total
+			ms.logger.Infof("%dMB speed=%dMB/s\n",bytes_received / 1024 / 1024,speed)
 		}
 	}()
 	go func ()  {
 		for {
-			time.Sleep(time.Second)
+			time.Sleep(100 * time.Millisecond)
 			err := stream.Send(&mlspb.UploadStatus{ Success: ids, })
 			if err != nil {
 				break
@@ -107,9 +112,10 @@ func (ms *MLSServer) Upload(stream mlspb.MLSService_UploadServer) error {
 				continue
 			}
 
+			_,err = f.Write(data.Content)
+			bytes_received += int64(len(data.Content))
 			last_id = data.Id
 			ids = append(ids, data.Id)
-			_,err = f.Write(data.Content)
 			if err != nil && !done {
 				panic(fmt.Errorf("error Writing data: %s", err.Error()))
 			}
