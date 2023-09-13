@@ -82,6 +82,10 @@ func (ms *MLSServer) Upload(stream mlspb.MLSService_UploadServer) error {
 	go func()  {
 		last := time.Now().UnixMilli()
 		for {
+			if done {
+				return
+			}
+
 			time.Sleep(1 * time.Second)
 			total := ( time.Now().UnixMilli() - last ) / 1000
 			speed := bytes_received / 1024 / 1024 / total
