@@ -49,6 +49,7 @@ func (mc *MLSClient) Upload(ctx context.Context, f *os.File) error {
 	}
 
 	done := false
+	bytes_sent := 0
 	sent,success := []int64{},[]int64{}
 	channel := make(chan []byte,1000)
 
@@ -77,6 +78,7 @@ func (mc *MLSClient) Upload(ctx context.Context, f *os.File) error {
 			}
 
 			count++
+			bytes_sent += len(buf)
 		}
 	}()
 
@@ -110,8 +112,8 @@ func (mc *MLSClient) Upload(ctx context.Context, f *os.File) error {
 	}()
 
 	for {
-		time.Sleep(100 * time.Millisecond)
-		if !done {
+		time.Sleep(1 * time.Second)
+		if !done || bytes_sent != int(info.Size()) {
 			continue
 		}
 
