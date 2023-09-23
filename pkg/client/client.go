@@ -83,8 +83,14 @@ func (mc *MLSClient) Upload(ctx context.Context, f *os.File) error {
 	}()
 
 	go func ()  {
+		unittime := int64( (512 * 1024) * (1000 * 1000 * 1000) / ( 50 * 1024 * 1024) ) 
+		prev := time.Now().UnixNano()
 		for {
-			buf := make([]byte, 1024 * 512) // 16MB chunk
+			now := time.Now().UnixNano()
+			if now - prev < unittime { time.Sleep(time.Duration(unittime - (now - prev)) ) }
+			prev = now
+
+			buf := make([]byte, 1024 * 512) // 512KB chunk
 			n,err := f.Read(buf)
 			if err != nil {
 				if err == io.EOF {
