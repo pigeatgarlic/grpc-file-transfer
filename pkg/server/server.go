@@ -63,7 +63,7 @@ func (ms *MLSServer) Upload(stream mlspb.MLSService_UploadServer) error {
 
 		f.Close()
 		if bytes_received < md.fileSize {
-			fmt.Printf("Only received %dMB out of %dMB for file %s", bytes_received/1024/1024, size/1024/1024, tempFile)
+			fmt.Printf("Only received %dMB out of %dMB for file %s\n", bytes_received/1024/1024, size/1024/1024, tempFile)
 			os.Remove(tempFile)
 		} else {
 			fmt.Printf("Finished receiving file %s\n", destFile)
