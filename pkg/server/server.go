@@ -50,7 +50,6 @@ func (ms *MLSServer) Upload(stream mlspb.MLSService_UploadServer) error {
 	bytes_received := int64(0)
 	channel := make(chan *mlspb.Chunk, 1000)
 	defer func() {
-		done = true
 		for {
 			time.Sleep(10 * time.Millisecond)
 			stat, err := f.Stat()
@@ -89,7 +88,7 @@ func (ms *MLSServer) Upload(stream mlspb.MLSService_UploadServer) error {
 			fmt.Printf("%dMB speed=%dMB\n", bytes_received/1024/1024, bytes_diff/1024/1024*1000/diff)
 			if bytes_received > 0 && bytes_diff == 0 {
 				fmt.Printf("no new bytes received, context canceled\n")
-				stream.Context().Done()
+				done = true
 			}
 		}
 	}()
@@ -126,13 +125,23 @@ func (ms *MLSServer) Upload(stream mlspb.MLSService_UploadServer) error {
 			}
 		}
 	}()
+	go func() {
+		for {
+			data, err := stream.Recv()
+			if err != nil {
+				done = true
+				channel <- nil
+				break
+			}
+			channel <- data
+		}
+	}()
+
 	for {
-		data, err := stream.Recv()
-		if err != nil {
-			channel <- nil
+		time.Sleep(100 * time.Millisecond)
+		if done {
 			break
 		}
-		channel <- data
 	}
 
 	return nil
