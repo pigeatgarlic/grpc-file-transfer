@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 
-	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -17,7 +16,6 @@ func main() {
 	file := os.Args[1]
 
 	ctx := context.Background()
-	var logger = log.New()
 
 	// Set up connection with rpc server
 	var conn *grpc.ClientConn
@@ -26,7 +24,7 @@ func main() {
 		panic(fmt.Errorf("grpc Dial fail: %s/n", err))
 	}
 
-	mlsClient := client.NewClient(logger, conn)
+	mlsClient := client.NewClient(conn)
 	defer mlsClient.CloseConn()
 
 	f, err := os.Open(file)

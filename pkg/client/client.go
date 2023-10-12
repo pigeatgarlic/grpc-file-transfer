@@ -9,26 +9,28 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
 	mlspb "github.com/pigeatgarlic/grpc-file-server/pkg/protobuf"
 )
 
+const (
+	// 512kB * (second/nanosec) / 50MB/s
+	unittime = int64((512 * 1024) * (1000 * 1000 * 1000) / (50 * 1024 * 1024))
+)
+
 // MLSClient maintains info for talking to MLS service
 type MLSClient struct {
-	logger *logrus.Logger
-	conn   *grpc.ClientConn
-	route  mlspb.MLSServiceClient
+	conn  *grpc.ClientConn
+	route mlspb.MLSServiceClient
 }
 
 // NewClient will create a New MLSClient
-func NewClient(logger *logrus.Logger, conn *grpc.ClientConn) *MLSClient {
+func NewClient(conn *grpc.ClientConn) *MLSClient {
 	return &MLSClient{
-		logger: logger,
-		conn:   conn,
-		route:  mlspb.NewMLSServiceClient(conn),
+		conn:  conn,
+		route: mlspb.NewMLSServiceClient(conn),
 	}
 }
 
@@ -38,8 +40,8 @@ func (mc *MLSClient) Upload(ctx context.Context, f *os.File) error {
 	if err != nil {
 		return err
 	}
-	ctx = metadata.NewOutgoingContext(ctx,metadata.Pairs(
-		"file_name", info.Name(), 
+	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs(
+		"file_name", info.Name(),
 		"file_size", strconv.FormatInt(info.Size(), 10),
 	))
 
@@ -50,24 +52,22 @@ func (mc *MLSClient) Upload(ctx context.Context, f *os.File) error {
 
 	done := false
 	bytes_sent := 0
-	sent,success := []int64{},[]int64{}
-	channel := make(chan []byte,1000)
-
+	sent, success := []int64{}, []int64{}
+	channel := make(chan []byte, 1000)
 
 	go func() {
 		var count int64 = 1
 		for {
-			buf:=<-channel
+			buf := <-channel
 			if buf == nil {
 				return
 			}
 
-
 			sent = append(sent, count)
 			chunk := &mlspb.Chunk{
-				Id: count,
+				Id:      count,
 				Content: buf,
-				Sum256: fmt.Sprintf("%x", md5.Sum(buf)),
+				Sum256:  fmt.Sprintf("%x", md5.Sum(buf)),
 			}
 			if err := stream.Send(chunk); err != nil {
 				if err == io.EOF {
@@ -82,20 +82,21 @@ func (mc *MLSClient) Upload(ctx context.Context, f *os.File) error {
 		}
 	}()
 
-	go func ()  {
-		unittime := int64( (512 * 1024) * (1000 * 1000 * 1000) / ( 50 * 1024 * 1024) ) 
+	go func() {
 		prev := time.Now().UnixNano()
 		for {
 			now := time.Now().UnixNano()
-			if now - prev < unittime { time.Sleep(time.Duration(unittime - (now - prev)) ) }
+			if now-prev < unittime {
+				time.Sleep(time.Duration(unittime - (now - prev)))
+			}
 			prev = now
 
-			buf := make([]byte, 1024 * 512) // 512KB chunk
-			n,err := f.Read(buf)
+			buf := make([]byte, 1024*512) // 512KB chunk
+			n, err := f.Read(buf)
 			if err != nil {
 				if err == io.EOF {
 					done = true
-					channel<-nil
+					channel <- nil
 					break
 				}
 
@@ -106,9 +107,9 @@ func (mc *MLSClient) Upload(ctx context.Context, f *os.File) error {
 		}
 	}()
 
-	go func ()  {
+	go func() {
 		for {
-			status,err := stream.Recv()
+			status, err := stream.Recv()
 			if err != nil {
 				panic(err)
 			}
@@ -123,11 +124,10 @@ func (mc *MLSClient) Upload(ctx context.Context, f *os.File) error {
 			continue
 		}
 
-
 		pass := true
 		for _, v := range sent {
 			included := false
-			for _,v2 := range success {
+			for _, v2 := range success {
 				if v == v2 {
 					included = true
 				}
@@ -143,7 +143,7 @@ func (mc *MLSClient) Upload(ctx context.Context, f *os.File) error {
 		}
 	}
 
-	mc.logger.Infof("Finished sending file...")
+	fmt.Printf("Finished sending file...\n")
 	mc.CloseConn()
 	return nil
 }

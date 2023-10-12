@@ -5,9 +5,6 @@ import (
 	"net"
 	"os"
 
-	"github.com/sirupsen/logrus"
-	"google.golang.org/grpc"
-
 	"github.com/pigeatgarlic/grpc-file-server/pkg/server"
 	mlspb "github.com/pigeatgarlic/grpc-file-server/pkg/protobuf"
 )
@@ -16,7 +13,6 @@ func main() {
 	Dir  := os.Args[1]
 	Port := os.Args[2]
 
-	logger := logrus.New()
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s",Port))
 	if err != nil {
 		fmt.Printf("failed %s\n",err.Error())
@@ -24,11 +20,11 @@ func main() {
 	}
 	defer lis.Close()
 
-	logger.Infof("Now serving %s", lis.Addr().String())
+	fmt.Printf("Now serving %s\n", lis.Addr().String())
 
 	grpcServer := grpc.NewServer()
 
-	s := server.NewMLSServer(logger, Dir)
+	s := server.NewMLSServer(Dir)
 	mlspb.RegisterMLSServiceServer(grpcServer, s)
 	defer grpcServer.GracefulStop()
 
