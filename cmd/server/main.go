@@ -5,8 +5,9 @@ import (
 	"net"
 	"os"
 
-	"github.com/pigeatgarlic/grpc-file-server/pkg/server"
 	mlspb "github.com/pigeatgarlic/grpc-file-server/pkg/protobuf"
+	"github.com/pigeatgarlic/grpc-file-server/pkg/server"
+	"google.golang.org/grpc"
 )
 
 func main() {
